@@ -21,7 +21,7 @@ Erstellung einer vereinfachten Einkaufshilfe basierend auf dem REWE Online-Shop 
   - Diverse Scraper-Projekte
 - Community-Projekte beschränken sich auf **Lese-Zugriff** (Produkte, Preise, Angebote)
 
-## Geplante Architektur
+## Architektur
 ```
 ┌─────────────────────────────────────┐
 │  Admin-Backend (für dich)           │
@@ -42,20 +42,55 @@ Erstellung einer vereinfachten Einkaufshilfe basierend auf dem REWE Online-Shop 
 ## Durchgeführte Schritte
 
 ### 1. Projekt initialisiert
-```bash
-npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-npm --yes
-```
-- Next.js Projekt mit TypeScript, Tailwind CSS, ESLint, App Router, src-Verzeichnis
+- Next.js mit TypeScript, Tailwind CSS, ESLint, App Router, src-Verzeichnis
+- SQLite (better-sqlite3) installiert
+- Systemfonts statt Google Fonts (Offline-Kompatibilität)
 
-### 2. SQLite installiert
+### 2. Datenbank-Schema erstellt (`src/lib/db.ts`)
+- Tabellen: `categories`, `products`, `shopping_lists`, `shopping_list_items`
+- Indizes für Performance
+
+### 3. Seed-Script (`scripts/seed.ts`)
+- 10 Kategorien (Obst & Gemüse, Brot, Milchprodukte, etc.)
+- 31 Beispiel-Produkte mit realistischen Preisen
+- Ausführen: `npm run seed`
+
+### 4. API-Routen erstellt
+- `GET/POST/PUT/DELETE /api/categories` – Kategorien CRUD
+- `GET/POST/PUT /api/products` – Produkte CRUD + Suche/Filter
+- `GET/POST/PUT/DELETE /api/shopping-list` – Einkaufsliste verwalten
+- `POST /api/shopping-list/send` – Liste als Text generieren + WhatsApp/E-Mail-Links
+
+### 5. Admin-Backend (`/admin`)
+- Kategorien erstellen/löschen (Sidebar)
+- Produkte suchen, nach Kategorie filtern
+- Produkte per Toggle aktivieren/deaktivieren
+- Neue Produkte manuell hinzufügen
+
+### 6. Einkaufs-Frontend (`/einkauf`)
+- Große Kacheln mit Produktname, Preis, Menge
+- Horizontaler Kategorie-Filter
+- Warenkorb mit +/- Buttons und Artikelzähler
+- "Liste senden" Dialog: WhatsApp, E-Mail oder Text kopieren
+
+### 7. Startseite (`/`)
+- Große Kacheln: "Einkaufen" und "Verwaltung"
+
+## Git
+- Branch: `claude/review-deleted-content-VvpKi`
+- 2 Commits gepusht
+- PR konnte nicht automatisch erstellt werden (kein `gh` CLI verfügbar)
+
+## Starten
 ```bash
-npm install better-sqlite3
-npm install -D @types/better-sqlite3
+npm run seed   # Datenbank mit Beispieldaten füllen
+npm run dev    # Entwicklungsserver starten (localhost:3000)
 ```
 
-### Nächste Schritte (geplant)
-- [ ] Datenbank-Schema erstellen (Produkte, Kategorien, Einkaufslisten)
-- [ ] REWE-Produktdaten importieren
-- [ ] Admin-Backend bauen
-- [ ] Einfaches Frontend für ältere Nutzer
-- [ ] Liste-senden-Funktion (E-Mail/WhatsApp)
+## Nächste Schritte (für eine spätere Session)
+- [ ] REWE-CSV-Import (echte Produktdaten aus `L480/rewe-price-data`)
+- [ ] Produktbilder hinzufügen
+- [ ] Admin-Authentifizierung (einfaches Passwort)
+- [ ] PWA-Support (Offline, Homescreen-Icon)
+- [ ] Favoriten / "Letzte Einkäufe" für die ältere Person
+- [ ] Pull Request erstellen
