@@ -21,6 +21,15 @@ interface Product {
   is_active: number;
 }
 
+interface ImportResult {
+  success: boolean;
+  imported: number;
+  updated: number;
+  newCategories: number;
+  totalLines: number;
+  error?: string;
+}
+
 export default function AdminPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -28,6 +37,9 @@ export default function AdminPage() {
   const [filterCategory, setFilterCategory] = useState("");
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [newProduct, setNewProduct] = useState({ name: "", brand: "", price: "", grammage: "", category_id: "" });
   const [newCategory, setNewCategory] = useState({ name: "", icon: "", sort_order: "0" });
 
@@ -93,6 +105,34 @@ export default function AdminPage() {
     loadCategories();
   };
 
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    setImportResult(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/import", { method: "POST", body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        setImportResult(data);
+        loadProducts();
+        loadCategories();
+      } else {
+        setImportResult({ success: false, imported: 0, updated: 0, newCategories: 0, totalLines: 0, error: data.error });
+      }
+    } catch {
+      setImportResult({ success: false, imported: 0, updated: 0, newCategories: 0, totalLines: 0, error: "Netzwerkfehler" });
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
+  };
+
   const activeCount = products.filter((p) => p.is_active).length;
 
   return (
@@ -105,11 +145,62 @@ export default function AdminPage() {
               {activeCount} von {products.length} Produkten im Sortiment
             </p>
           </div>
-          <a href="/einkauf" className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
-            Zur Einkaufs-Ansicht →
-          </a>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowImport(!showImport)}
+              className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600"
+            >
+              CSV Import
+            </button>
+            <a href="/einkauf" className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+              Zur Einkaufs-Ansicht →
+            </a>
+          </div>
         </div>
       </header>
+
+      {showImport && (
+        <div className="max-w-6xl mx-auto px-4 pt-6">
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+            <h2 className="font-semibold text-lg mb-2">REWE-Produkte aus CSV importieren</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Lade eine CSV-Datei im Format von{" "}
+              <span className="font-mono text-xs">L480/rewe-price-data</span> hoch
+              (Spalten: name, brand, ean, price, grammage, category, sale, image).
+              Neue Produkte werden als <strong>inaktiv</strong> importiert – du kannst sie dann einzeln aktivieren.
+            </p>
+            <div className="flex items-center gap-4">
+              <label className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white ${importing ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"}`}>
+                {importing ? "Importiere..." : "CSV-Datei auswählen"}
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleImport}
+                  disabled={importing}
+                  className="hidden"
+                />
+              </label>
+              {importing && <span className="text-sm text-gray-500">Das kann bei großen Dateien einen Moment dauern...</span>}
+            </div>
+            {importResult && (
+              <div className={`mt-4 p-3 rounded-lg text-sm ${importResult.error ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                {importResult.error ? (
+                  <p>Fehler: {importResult.error}</p>
+                ) : (
+                  <div>
+                    <p className="font-semibold">Import erfolgreich!</p>
+                    <p>{importResult.imported} neue Produkte importiert</p>
+                    <p>{importResult.updated} bestehende Produkte aktualisiert</p>
+                    {importResult.newCategories > 0 && (
+                      <p>{importResult.newCategories} neue Kategorien erstellt</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar: Kategorien */}
